@@ -44,13 +44,18 @@ cfg_if! {
         use alloc::{vec::Vec, boxed::Box};
 
         pub(crate) type HashMap<K, V, S> = hashbrown::HashMap<K, SharedValue<V>, S>;
+
+        fn shard_amount() -> usize {
+            8
+        }
+
     } else {
         pub(crate) type HashMap<K, V, S> = std::collections::HashMap<K, SharedValue<V>, S>;
-    }
-}
 
-fn shard_amount() -> usize {
-    (num_cpus::get() * 4).next_power_of_two()
+        fn shard_amount() -> usize {
+            (num_cpus::get() * 4).next_power_of_two()
+        }
+    }
 }
 
 fn ncb(shard_amount: usize) -> usize {
