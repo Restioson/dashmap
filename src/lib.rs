@@ -46,10 +46,12 @@ cfg_if! {
         use alloc::{vec::Vec, boxed::Box};
 
         pub(crate) type HashMap<K, V, S> = hashbrown::HashMap<K, SharedValue<V>, S>;
+
+        fn shard_amount() -> usize {
+           8
+        }
     } else {
         pub(crate) type HashMap<K, V, S> = std::collections::HashMap<K, SharedValue<V>, S>;
-    }
-}
 
         #[cfg(feature = "shard_amount_detection")]
         fn shard_amount() -> usize {
@@ -60,7 +62,6 @@ cfg_if! {
         fn shard_amount() -> usize {
            8
         }
-
     }
 }
 
