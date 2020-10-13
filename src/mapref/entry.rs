@@ -1,14 +1,13 @@
 use super::one::RefMut;
 use crate::lock::RwLockWriteGuard;
-use crate::util;
+use crate::{util, WyHasherBuilder};
 use crate::util::SharedValue;
 use crate::HashMap;
-use ahash::RandomState;
 use core::hash::{BuildHasher, Hash};
 use core::mem;
 use core::ptr;
 
-pub enum Entry<'a, K, V, S = RandomState> {
+pub enum Entry<'a, K, V, S = WyHasherBuilder> {
     Occupied(OccupiedEntry<'a, K, V, S>),
     Vacant(VacantEntry<'a, K, V, S>),
 }

@@ -1,11 +1,10 @@
 use crate::lock::{RwLockReadGuard, RwLockWriteGuard};
-use crate::HashMap;
-use ahash::RandomState;
+use crate::{HashMap, WyHasherBuilder};
 use core::hash::{BuildHasher, Hash};
 use core::ops::{Deref, DerefMut};
 
 // -- Shared
-pub struct Ref<'a, K, V, S = RandomState> {
+pub struct Ref<'a, K, V, S = WyHasherBuilder> {
     _guard: RwLockReadGuard<'a, HashMap<K, V, S>>,
     k: &'a K,
     v: &'a V,
@@ -50,7 +49,7 @@ impl<'a, K: Eq + Hash, V, S: BuildHasher> Deref for Ref<'a, K, V, S> {
 
 // --
 // -- Unique
-pub struct RefMut<'a, K, V, S = RandomState> {
+pub struct RefMut<'a, K, V, S = WyHasherBuilder> {
     guard: RwLockWriteGuard<'a, HashMap<K, V, S>>,
     k: &'a K,
     v: &'a mut V,

@@ -2,10 +2,9 @@ use crate::iter_set::{Iter, OwningIter};
 #[cfg(feature = "raw-api")]
 use crate::lock::RwLock;
 use crate::setref::one::Ref;
-use crate::DashMap;
+use crate::{DashMap, WyHasherBuilder};
 #[cfg(feature = "raw-api")]
 use crate::HashMap;
-use ahash::RandomState;
 use cfg_if::cfg_if;
 use core::borrow::Borrow;
 use core::fmt;
@@ -17,7 +16,7 @@ use core::iter::FromIterator;
 ///
 /// [`DashMap`]: struct.DashMap.html
 
-pub struct DashSet<K, S = RandomState> {
+pub struct DashSet<K, S = WyHasherBuilder> {
     inner: DashMap<K, (), S>,
 }
 
@@ -49,7 +48,7 @@ where
     }
 }
 
-impl<'a, K: 'a + Eq + Hash> DashSet<K, RandomState> {
+impl<'a, K: 'a + Eq + Hash> DashSet<K, WyHasherBuilder> {
     /// Creates a new DashSet with a capacity of 0.
     ///
     /// # Examples
@@ -62,7 +61,7 @@ impl<'a, K: 'a + Eq + Hash> DashSet<K, RandomState> {
     /// ```
 
     pub fn new() -> Self {
-        Self::with_hasher(RandomState::default())
+        Self::with_hasher(WyHasherBuilder::default())
     }
 
     /// Creates a new DashMap with a specified starting capacity.
@@ -78,7 +77,7 @@ impl<'a, K: 'a + Eq + Hash> DashSet<K, RandomState> {
     /// ```
 
     pub fn with_capacity(capacity: usize) -> Self {
-        Self::with_capacity_and_hasher(capacity, RandomState::default())
+        Self::with_capacity_and_hasher(capacity, WyHasherBuilder::default())
     }
 }
 
@@ -425,7 +424,7 @@ impl<K: Eq + Hash, S: BuildHasher + Clone> Extend<K> for DashSet<K, S> {
     }
 }
 
-impl<K: Eq + Hash> FromIterator<K> for DashSet<K, RandomState> {
+impl<K: Eq + Hash> FromIterator<K> for DashSet<K, WyHasherBuilder> {
     fn from_iter<I: IntoIterator<Item = K>>(iter: I) -> Self {
         let mut set = DashSet::new();
 

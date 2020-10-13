@@ -13,11 +13,11 @@ pub mod setref;
 mod t;
 mod util;
 
-use ahash::RandomState;
+use wyhash::WyHash;
 use cfg_if::cfg_if;
 use core::borrow::Borrow;
 use core::fmt;
-use core::hash::{BuildHasher, Hash, Hasher};
+use core::hash::{BuildHasher, BuildHasherDefault, Hash, Hasher};
 use core::iter::FromIterator;
 use core::ops::{BitAnd, BitOr, Shl, Shr, Sub};
 use iter::{Iter, IterMut, OwningIter};
@@ -28,6 +28,8 @@ use mapref::one::{Ref, RefMut};
 pub use read_only::ReadOnlyView;
 pub use set::DashSet;
 pub use t::Map;
+
+pub type WyHasherBuilder = BuildHasherDefault<WyHash>;
 
 cfg_if! {
     if #[cfg(feature = "raw-api")] {
@@ -49,8 +51,17 @@ cfg_if! {
     }
 }
 
-fn shard_amount() -> usize {
-    (num_cpus::get() * 4).next_power_of_two()
+        #[cfg(feature = "shard_amount_detection")]
+        fn shard_amount() -> usize {
+            (num_cpus::get() * 4).next_power_of_two()
+        }
+
+        #[cfg(not(feature = "shard_amount_detection"))]
+        fn shard_amount() -> usize {
+           8
+        }
+
+    }
 }
 
 fn ncb(shard_amount: usize) -> usize {
@@ -66,7 +77,7 @@ fn ncb(shard_amount: usize) -> usize {
 /// To accomplish these all methods take `&self` instead modifying methods taking `&mut self`.
 /// This allows you to put a DashMap in an `Arc<T>` and share it between threads while being able to modify it.
 
-pub struct DashMap<K, V, S = RandomState> {
+pub struct DashMap<K, V, S = WyHasherBuilder> {
     shift: usize,
     shards: Box<[RwLock<HashMap<K, V, S>>]>,
     hasher: S,
@@ -100,7 +111,7 @@ where
     }
 }
 
-impl<'a, K: 'a + Eq + Hash, V: 'a> DashMap<K, V, RandomState> {
+impl<'a, K: 'a + Eq + Hash, V: 'a> DashMap<K, V, WyHasherBuilder> {
     /// Creates a new DashMap with a capacity of 0.
     ///
     /// # Examples
@@ -113,7 +124,7 @@ impl<'a, K: 'a + Eq + Hash, V: 'a> DashMap<K, V, RandomState> {
     /// ```
 
     pub fn new() -> Self {
-        DashMap::with_hasher(RandomState::default())
+        DashMap::with_hasher(BuildHasherDefault::default())
     }
 
     /// Creates a new DashMap with a specified starting capacity.
@@ -129,7 +140,7 @@ impl<'a, K: 'a + Eq + Hash, V: 'a> DashMap<K, V, RandomState> {
     /// ```
 
     pub fn with_capacity(capacity: usize) -> Self {
-        DashMap::with_capacity_and_hasher(capacity, RandomState::default())
+        DashMap::with_capacity_and_hasher(capacity, BuildHasherDefault::default())
     }
 }
 
@@ -295,12 +306,11 @@ impl<'a, K: 'a + Eq + Hash, V: 'a, S: BuildHasher + Clone> DashMap<K, V, S> {
     /// # Examples
     ///
     /// ```rust
-    /// use dashmap::DashMap;
-    /// use ahash::RandomState;
+    /// use dashmap::{DashMap, WyHasherBuilder};
     ///
-    /// let hasher = RandomState::new();
+    /// let hasher = WyHasherBuilder::default();
     /// let map: DashMap<i32, i32> = DashMap::new();
-    /// let hasher: &RandomState = map.hasher();
+    /// let hasher: &WyHasherBuilder = map.hasher();
     /// ```
     ///
     /// [`BuildHasher`]: https://doc.rust-lang.org/std/hash/trait.BuildHasher.html
@@ -929,7 +939,7 @@ impl<K: Eq + Hash, V, S: BuildHasher + Clone> Extend<(K, V)> for DashMap<K, V, S
     }
 }
 
-impl<K: Eq + Hash, V> FromIterator<(K, V)> for DashMap<K, V, RandomState> {
+impl<K: Eq + Hash, V> FromIterator<(K, V)> for DashMap<K, V, WyHasherBuilder> {
     fn from_iter<I: IntoIterator<Item = (K, V)>>(intoiter: I) -> Self {
         let mut map = DashMap::new();
 
@@ -943,12 +953,12 @@ impl<K: Eq + Hash, V> FromIterator<(K, V)> for DashMap<K, V, RandomState> {
 
 mod tests {
 
-    use crate::DashMap;
+    use crate::{DashMap, WyHasherBuilder};
 
     cfg_if::cfg_if! {
         if #[cfg(feature = "no_std")] {
             use alloc::string::String;
-            use ahash::RandomState;
+            use wyhash::WyHash;
         } else {
             use std::collections::hash_map::RandomState;
         }
@@ -1027,8 +1037,8 @@ mod tests {
     #[test]
 
     fn test_different_hashers_randomstate() {
-        let dm_hm_default: DashMap<u32, u32, RandomState> =
-            DashMap::with_hasher(RandomState::new());
+        let dm_hm_default: DashMap<u32, u32, WyHasherBuilder> =
+            DashMap::with_hasher(WyHasherBuilder::default());
 
         for i in 0..10 {
             dm_hm_default.insert(i, i);

@@ -1,9 +1,8 @@
-use crate::mapref;
-use ahash::RandomState;
+use crate::{mapref, WyHasherBuilder};
 use core::hash::{BuildHasher, Hash};
 use core::ops::Deref;
 
-pub struct Ref<'a, K, S = RandomState> {
+pub struct Ref<'a, K, S = WyHasherBuilder> {
     inner: mapref::one::Ref<'a, K, (), S>,
 }
 
